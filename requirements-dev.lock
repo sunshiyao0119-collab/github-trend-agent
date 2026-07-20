@@ -1,0 +1,2 @@
+# Reproducible development tooling for Python 3.12 on Windows.
+ruff==0.15.22
