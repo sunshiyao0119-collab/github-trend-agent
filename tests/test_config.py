@@ -12,6 +12,10 @@ class SettingsTest(unittest.TestCase):
         settings = Settings.from_env({})
 
         self.assertEqual(settings.github_api_url, "https://api.github.com")
+        self.assertEqual(
+            settings.github_search_query,
+            "language:python stars:>1000",
+        )
         self.assertEqual(settings.request_timeout_seconds, 10.0)
         self.assertEqual(settings.top_n, 10)
         self.assertFalse(settings.github_auth_enabled)
@@ -31,8 +35,10 @@ class SettingsTest(unittest.TestCase):
         self.assertNotIn("test-secret", repr(settings))
 
     def test_rejects_invalid_top_n(self) -> None:
-        with self.assertRaisesRegex(ConfigurationError, "GITHUB_TOP_N"):
-            Settings.from_env({"GITHUB_TOP_N": "0"})
+        for invalid_value in ("0", "101"):
+            with self.subTest(invalid_value=invalid_value):
+                with self.assertRaisesRegex(ConfigurationError, "GITHUB_TOP_N"):
+                    Settings.from_env({"GITHUB_TOP_N": invalid_value})
 
     def test_requires_token_only_when_requested(self) -> None:
         settings = Settings.from_env({})

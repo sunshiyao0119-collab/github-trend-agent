@@ -54,10 +54,13 @@ set PYTHONPATH=src
 python -m github_trend_agent
 ```
 
-预期输出：
+程序会向 GitHub Search API 发出只读请求，并显示按 Star 排序的公开仓库。输出示例：
 
 ```text
 GitHub Trend Agent is ready (unauthenticated mode).
+Found 10 repositories:
+1. public-apis/public-apis | Python | stars=451,458
+   https://github.com/public-apis/public-apis
 ```
 
 运行最小测试：
@@ -89,7 +92,8 @@ $env:PYTHONPATH = "src"
 | `GITHUB_TOKEN` | 空 | GitHub API 身份验证；真实值不得提交 |
 | `GITHUB_API_URL` | `https://api.github.com` | GitHub API 地址 |
 | `GITHUB_REQUEST_TIMEOUT_SECONDS` | `10` | 单次请求超时秒数 |
-| `GITHUB_TOP_N` | `10` | 最终保留的项目数量 |
+| `GITHUB_SEARCH_QUERY` | `language:python stars:>1000` | GitHub 仓库搜索条件 |
+| `GITHUB_TOP_N` | `10` | 单次返回数量，范围 1–100 |
 
 程序在没有 Token 时仍可启动，显示 `unauthenticated mode`。数据采集阶段需要更高 API 限额时，再配置真实 Token。
 
@@ -102,9 +106,12 @@ github-trend-agent/
 │       ├── __init__.py
 │       ├── __main__.py
 │       ├── config.py
+│       ├── github_client.py
+│       ├── models.py
 │       └── cli.py
 ├── tests/
 │   ├── test_config.py
+│   ├── test_github_client.py
 │   └── test_cli.py
 ├── scripts/
 │   └── check.py

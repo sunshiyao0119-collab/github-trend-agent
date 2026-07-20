@@ -16,6 +16,7 @@ class Settings:
     """Validated runtime settings for GitHub Trend Agent."""
 
     github_api_url: str
+    github_search_query: str
     request_timeout_seconds: float
     top_n: int
     github_token: str | None = field(default=None, repr=False)
@@ -30,15 +31,25 @@ class Settings:
         if not github_api_url.startswith("https://"):
             raise ConfigurationError("GITHUB_API_URL must use HTTPS.")
 
+        github_search_query = source.get(
+            "GITHUB_SEARCH_QUERY",
+            "language:python stars:>1000",
+        ).strip()
+        if not github_search_query:
+            raise ConfigurationError("GITHUB_SEARCH_QUERY cannot be empty.")
+
         request_timeout_seconds = _positive_float(
             "GITHUB_REQUEST_TIMEOUT_SECONDS",
             source.get("GITHUB_REQUEST_TIMEOUT_SECONDS", "10"),
         )
         top_n = _positive_int("GITHUB_TOP_N", source.get("GITHUB_TOP_N", "10"))
+        if top_n > 100:
+            raise ConfigurationError("GITHUB_TOP_N must be between 1 and 100.")
         github_token = source.get("GITHUB_TOKEN", "").strip() or None
 
         return cls(
             github_api_url=github_api_url,
+            github_search_query=github_search_query,
             request_timeout_seconds=request_timeout_seconds,
             top_n=top_n,
             github_token=github_token,
