@@ -17,6 +17,9 @@ class Settings:
 
     github_api_url: str
     github_search_query: str
+    github_page_size: int
+    github_max_repositories: int
+    github_max_retries: int
     request_timeout_seconds: float
     top_n: int
     github_token: str | None = field(default=None, repr=False)
@@ -42,14 +45,39 @@ class Settings:
             "GITHUB_REQUEST_TIMEOUT_SECONDS",
             source.get("GITHUB_REQUEST_TIMEOUT_SECONDS", "10"),
         )
+        github_page_size = _bounded_int(
+            "GITHUB_PAGE_SIZE",
+            source.get("GITHUB_PAGE_SIZE", "25"),
+            minimum=1,
+            maximum=100,
+        )
+        github_max_repositories = _bounded_int(
+            "GITHUB_MAX_REPOSITORIES",
+            source.get("GITHUB_MAX_REPOSITORIES", "50"),
+            minimum=1,
+            maximum=1000,
+        )
+        github_max_retries = _bounded_int(
+            "GITHUB_MAX_RETRIES",
+            source.get("GITHUB_MAX_RETRIES", "2"),
+            minimum=0,
+            maximum=5,
+        )
         top_n = _positive_int("GITHUB_TOP_N", source.get("GITHUB_TOP_N", "10"))
         if top_n > 100:
             raise ConfigurationError("GITHUB_TOP_N must be between 1 and 100.")
+        if top_n > github_max_repositories:
+            raise ConfigurationError(
+                "GITHUB_TOP_N cannot exceed GITHUB_MAX_REPOSITORIES."
+            )
         github_token = source.get("GITHUB_TOKEN", "").strip() or None
 
         return cls(
             github_api_url=github_api_url,
             github_search_query=github_search_query,
+            github_page_size=github_page_size,
+            github_max_repositories=github_max_repositories,
+            github_max_retries=github_max_retries,
             request_timeout_seconds=request_timeout_seconds,
             top_n=top_n,
             github_token=github_token,
@@ -77,6 +105,25 @@ def _positive_int(name: str, raw_value: str) -> int:
         raise ConfigurationError(f"{name} must be a positive integer.") from exc
     if value <= 0:
         raise ConfigurationError(f"{name} must be a positive integer.")
+    return value
+
+
+def _bounded_int(
+    name: str,
+    raw_value: str,
+    *,
+    minimum: int,
+    maximum: int,
+) -> int:
+    """Parse an integer constrained to an inclusive range."""
+    try:
+        value = int(raw_value)
+    except ValueError as exc:
+        raise ConfigurationError(
+            f"{name} must be between {minimum} and {maximum}."
+        ) from exc
+    if not minimum <= value <= maximum:
+        raise ConfigurationError(f"{name} must be between {minimum} and {maximum}.")
     return value
 
 

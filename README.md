@@ -58,7 +58,8 @@ python -m github_trend_agent
 
 ```text
 GitHub Trend Agent is ready (unauthenticated mode).
-Found 10 repositories:
+Collected 50 repositories across 2 page(s); showing top 10:
+GitHub search requests remaining: 8
 1. public-apis/public-apis | Python | stars=451,458
    https://github.com/public-apis/public-apis
 ```
@@ -93,9 +94,21 @@ $env:PYTHONPATH = "src"
 | `GITHUB_API_URL` | `https://api.github.com` | GitHub API 地址 |
 | `GITHUB_REQUEST_TIMEOUT_SECONDS` | `10` | 单次请求超时秒数 |
 | `GITHUB_SEARCH_QUERY` | `language:python stars:>1000` | GitHub 仓库搜索条件 |
+| `GITHUB_PAGE_SIZE` | `25` | 每页采集数量，范围 1–100 |
+| `GITHUB_MAX_REPOSITORIES` | `50` | 单次运行最多采集数量，范围 1–1000 |
+| `GITHUB_MAX_RETRIES` | `2` | 单页失败后的最大重试次数，范围 0–5 |
 | `GITHUB_TOP_N` | `10` | 单次返回数量，范围 1–100 |
 
 程序在没有 Token 时仍可启动，显示 `unauthenticated mode`。数据采集阶段需要更高 API 限额时，再配置真实 Token。
+
+## 分页、限流与重试
+
+- 客户端根据 GitHub 响应中的 `Link` 头读取下一页，并受 `GITHUB_MAX_REPOSITORIES` 总量约束。
+- 每次运行会显示最后一页返回的 Search API 剩余额度。
+- 403/429 限流优先遵守 `Retry-After`，主限流则等待到 `X-RateLimit-Reset`。
+- 500、502、503、504 和临时网络错误采用有上限的指数退避。
+- 其他 4xx 错误立即失败，避免无意义重试和浪费配额。
+- 单元测试使用替代的等待函数，不会真实休眠。
 
 ## 当前目录结构
 

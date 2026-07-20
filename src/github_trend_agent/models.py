@@ -17,3 +17,22 @@ class Repository:
     topics: tuple[str, ...]
     owner: str
     updated_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class RateLimitInfo:
+    """Rate-limit state reported by the most recent GitHub response."""
+
+    limit: int | None
+    remaining: int | None
+    reset_at: datetime | None
+    resource: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class RepositorySearchResult:
+    """Repositories plus collection metadata needed by callers."""
+
+    repositories: tuple[Repository, ...]
+    pages_fetched: int
+    rate_limit: RateLimitInfo

@@ -16,6 +16,9 @@ class SettingsTest(unittest.TestCase):
             settings.github_search_query,
             "language:python stars:>1000",
         )
+        self.assertEqual(settings.github_page_size, 25)
+        self.assertEqual(settings.github_max_repositories, 50)
+        self.assertEqual(settings.github_max_retries, 2)
         self.assertEqual(settings.request_timeout_seconds, 10.0)
         self.assertEqual(settings.top_n, 10)
         self.assertFalse(settings.github_auth_enabled)
@@ -25,12 +28,18 @@ class SettingsTest(unittest.TestCase):
             {
                 "GITHUB_TOKEN": "test-secret",
                 "GITHUB_REQUEST_TIMEOUT_SECONDS": "2.5",
+                "GITHUB_PAGE_SIZE": "20",
+                "GITHUB_MAX_REPOSITORIES": "80",
+                "GITHUB_MAX_RETRIES": "3",
                 "GITHUB_TOP_N": "5",
             }
         )
 
         self.assertTrue(settings.github_auth_enabled)
         self.assertEqual(settings.request_timeout_seconds, 2.5)
+        self.assertEqual(settings.github_page_size, 20)
+        self.assertEqual(settings.github_max_repositories, 80)
+        self.assertEqual(settings.github_max_retries, 3)
         self.assertEqual(settings.top_n, 5)
         self.assertNotIn("test-secret", repr(settings))
 

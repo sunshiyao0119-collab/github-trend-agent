@@ -25,16 +25,25 @@ def main() -> int:
 
     client = GitHubClient(settings)
     try:
-        repositories = client.search_repositories(
+        result = client.search_repositories(
             settings.github_search_query,
-            settings.top_n,
+            max_repositories=settings.github_max_repositories,
+            page_size=settings.github_page_size,
         )
     except GitHubClientError as exc:
         print(f"GitHub collection error: {exc}", file=sys.stderr)
         return 1
 
-    print(f"Found {len(repositories)} repositories:")
-    for position, repository in enumerate(repositories, start=1):
+    print(
+        f"Collected {len(result.repositories)} repositories "
+        f"across {result.pages_fetched} page(s); showing top {settings.top_n}:"
+    )
+    if result.rate_limit.remaining is not None:
+        print(f"GitHub search requests remaining: {result.rate_limit.remaining}")
+    for position, repository in enumerate(
+        result.repositories[: settings.top_n],
+        start=1,
+    ):
         print(_format_repository(position, repository))
     return 0
 
