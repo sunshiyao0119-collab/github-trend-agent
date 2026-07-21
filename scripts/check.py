@@ -34,6 +34,10 @@ def main() -> int:
             [sys.executable, "-m", "ruff", "check", "--no-cache", "."],
         ),
         (
+            "secrets",
+            [sys.executable, "scripts/check_secrets.py"],
+        ),
+        (
             "tests",
             [
                 sys.executable,

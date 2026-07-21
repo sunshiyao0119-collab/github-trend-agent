@@ -1,6 +1,8 @@
 """Tests for application configuration."""
 
+import os
 import unittest
+from unittest.mock import patch
 
 from github_trend_agent.config import ConfigurationError, Settings
 
@@ -54,6 +56,28 @@ class SettingsTest(unittest.TestCase):
 
         with self.assertRaisesRegex(ConfigurationError, "GITHUB_TOKEN"):
             settings.require_github_token()
+
+    @patch("github_trend_agent.config.find_dotenv", return_value="project/.env")
+    @patch(
+        "github_trend_agent.config.dotenv_values",
+        return_value={"GITHUB_TOKEN": "file-secret", "GITHUB_TOP_N": "5"},
+    )
+    def test_process_environment_overrides_dotenv(
+        self,
+        dotenv_values_mock: object,
+        find_dotenv_mock: object,
+    ) -> None:
+        del dotenv_values_mock, find_dotenv_mock
+        with patch.dict(
+            os.environ,
+            {"GITHUB_TOKEN": "process-secret"},
+            clear=True,
+        ):
+            settings = Settings.from_env()
+
+        self.assertEqual(settings.require_github_token(), "process-secret")
+        self.assertEqual(settings.top_n, 5)
+        self.assertNotIn("process-secret", repr(settings))
 
 
 if __name__ == "__main__":

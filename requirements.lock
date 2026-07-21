@@ -1,0 +1,2 @@
+# Reproducible runtime dependencies for Python 3.12.
+python-dotenv==1.2.2

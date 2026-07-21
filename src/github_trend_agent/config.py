@@ -6,6 +6,8 @@ import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
+from dotenv import dotenv_values, find_dotenv
+
 
 class ConfigurationError(ValueError):
     """Raised when application configuration is missing or invalid."""
@@ -27,7 +29,7 @@ class Settings:
     @classmethod
     def from_env(cls, values: Mapping[str, str] | None = None) -> Settings:
         """Build settings from a supplied mapping or the process environment."""
-        source = os.environ if values is None else values
+        source = _runtime_environment() if values is None else values
 
         github_api_url = source.get("GITHUB_API_URL", "https://api.github.com")
         github_api_url = github_api_url.strip().rstrip("/")
@@ -136,3 +138,14 @@ def _positive_float(name: str, raw_value: str) -> float:
     if value <= 0:
         raise ConfigurationError(f"{name} must be a positive number.")
     return value
+
+
+def _runtime_environment() -> dict[str, str]:
+    """Load local .env values, then let process variables override them."""
+    env_path = find_dotenv(usecwd=True)
+    file_values = dotenv_values(env_path) if env_path else {}
+    source = {
+        key: value for key, value in file_values.items() if isinstance(value, str)
+    }
+    source.update(os.environ)
+    return source
