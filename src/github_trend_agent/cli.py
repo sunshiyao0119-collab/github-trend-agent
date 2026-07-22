@@ -2,9 +2,10 @@
 
 import sys
 
+from github_trend_agent.cleaner import clean_repositories
 from github_trend_agent.config import ConfigurationError, Settings
 from github_trend_agent.github_client import GitHubClient, GitHubClientError
-from github_trend_agent.models import Repository
+from github_trend_agent.models import CleanRepository
 
 
 def build_startup_message(settings: Settings) -> str:
@@ -34,24 +35,30 @@ def main() -> int:
         print(f"GitHub collection error: {exc}", file=sys.stderr)
         return 1
 
+    cleaning_result = clean_repositories(result.repositories)
     print(
-        f"Collected {len(result.repositories)} repositories "
-        f"across {result.pages_fetched} page(s); showing top {settings.top_n}:"
+        f"Collected {cleaning_result.total_received} repositories "
+        f"across {result.pages_fetched} page(s)."
     )
+    print(
+        f"Cleaning: kept={len(cleaning_result.repositories)}, "
+        f"duplicates={cleaning_result.duplicates_removed}, "
+        f"invalid={cleaning_result.invalid_removed}."
+    )
+    print(f"Showing top {settings.top_n}:")
     if result.rate_limit.remaining is not None:
         print(f"GitHub search requests remaining: {result.rate_limit.remaining}")
     for position, repository in enumerate(
-        result.repositories[: settings.top_n],
+        cleaning_result.repositories[: settings.top_n],
         start=1,
     ):
         print(_format_repository(position, repository))
     return 0
 
 
-def _format_repository(position: int, repository: Repository) -> str:
-    language = repository.language or "Unknown"
+def _format_repository(position: int, repository: CleanRepository) -> str:
     return (
         f"{position}. {repository.name} | "
-        f"{language} | stars={repository.stars:,}\n"
+        f"{repository.language} | stars={repository.stars:,}\n"
         f"   {repository.url}"
     )
