@@ -24,6 +24,10 @@ class SettingsTest(unittest.TestCase):
         self.assertEqual(settings.request_timeout_seconds, 10.0)
         self.assertEqual(settings.top_n, 10)
         self.assertFalse(settings.github_auth_enabled)
+        self.assertEqual(settings.llm_provider, "none")
+        self.assertFalse(settings.llm_analysis_enabled)
+        self.assertEqual(settings.llm_analysis_limit, 1)
+        self.assertEqual(settings.deepseek_model, "deepseek-v4-flash")
 
     def test_parses_supplied_values(self) -> None:
         settings = Settings.from_env(
@@ -44,6 +48,26 @@ class SettingsTest(unittest.TestCase):
         self.assertEqual(settings.github_max_retries, 3)
         self.assertEqual(settings.top_n, 5)
         self.assertNotIn("test-secret", repr(settings))
+
+    def test_parses_deepseek_settings_without_exposing_key(self) -> None:
+        settings = Settings.from_env(
+            {
+                "LLM_PROVIDER": "deepseek",
+                "DEEPSEEK_API_KEY": "deepseek-test-secret",
+                "DEEPSEEK_MODEL": "deepseek-v4-pro",
+                "LLM_ANALYSIS_LIMIT": "2",
+            }
+        )
+
+        self.assertTrue(settings.llm_analysis_enabled)
+        self.assertEqual(settings.require_deepseek_api_key(), "deepseek-test-secret")
+        self.assertEqual(settings.deepseek_model, "deepseek-v4-pro")
+        self.assertEqual(settings.llm_analysis_limit, 2)
+        self.assertNotIn("deepseek-test-secret", repr(settings))
+
+    def test_requires_deepseek_key_when_provider_is_enabled(self) -> None:
+        with self.assertRaisesRegex(ConfigurationError, "DEEPSEEK_API_KEY"):
+            Settings.from_env({"LLM_PROVIDER": "deepseek"})
 
     def test_rejects_invalid_top_n(self) -> None:
         for invalid_value in ("0", "101"):

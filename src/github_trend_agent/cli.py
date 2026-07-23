@@ -5,6 +5,8 @@ import sys
 from github_trend_agent.cleaner import clean_repositories
 from github_trend_agent.config import ConfigurationError, Settings
 from github_trend_agent.github_client import GitHubClient, GitHubClientError
+from github_trend_agent.llm.analysis import RepositoryAnalyzer, analyze_batch
+from github_trend_agent.llm.deepseek import DeepSeekProvider
 from github_trend_agent.models import ScoredRepository
 from github_trend_agent.scorer import score_current_heat
 
@@ -55,6 +57,9 @@ def main() -> int:
         start=1,
     ):
         print(_format_repository(position, repository))
+
+    if settings.llm_analysis_enabled:
+        _print_deepseek_analysis(settings, scored_repositories)
     return 0
 
 
@@ -69,3 +74,32 @@ def _format_repository(position: int, scored: ScoredRepository) -> str:
         f"   counts: stars={repository.stars:,}, forks={repository.forks:,}\n"
         f"   {repository.url}"
     )
+
+
+def _print_deepseek_analysis(
+    settings: Settings,
+    scored_repositories: tuple[ScoredRepository, ...],
+) -> None:
+    provider = DeepSeekProvider(
+        api_key=settings.require_deepseek_api_key(),
+        base_url=settings.deepseek_api_url,
+        model=settings.deepseek_model,
+        timeout_seconds=settings.llm_request_timeout_seconds,
+    )
+    selected = scored_repositories[: settings.llm_analysis_limit]
+    outcomes = analyze_batch(selected, RepositoryAnalyzer(provider))
+    print(f"DeepSeek 分析：请求项目数={len(selected)}")
+    for outcome in outcomes:
+        name = outcome.scored_repository.repository.name
+        if outcome.analysis is None:
+            print(f"项目 {name} 分析失败：{outcome.error}")
+            continue
+        analysis = outcome.analysis
+        print(f"\nAI 项目分析：{name}")
+        print(f"项目简介：{analysis.summary}")
+        print(f"值得关注：{analysis.why_worth_attention}")
+        print(f"技术价值：{analysis.technical_value}")
+        print(f"学习建议：{analysis.learning_advice}")
+        print(f"适合人群：{', '.join(analysis.suitable_for)}")
+        print(f"推荐指数：{analysis.recommendation_score}/5")
+        print(f"证据限制：{'; '.join(analysis.evidence_limitations)}")

@@ -58,6 +58,28 @@ class ScoredRepository:
 
 
 @dataclass(frozen=True, slots=True)
+class ProjectAnalysis:
+    """Validated structured analysis returned by an LLM."""
+
+    summary: str
+    why_worth_attention: str
+    technical_value: str
+    learning_advice: str
+    suitable_for: tuple[str, ...]
+    recommendation_score: int
+    evidence_limitations: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class AnalysisOutcome:
+    """One repository analysis result, including recoverable failure details."""
+
+    scored_repository: ScoredRepository
+    analysis: ProjectAnalysis | None
+    error: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class RateLimitInfo:
     """Rate-limit state reported by the most recent GitHub response."""
 
