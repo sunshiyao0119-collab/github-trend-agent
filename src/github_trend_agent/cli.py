@@ -5,7 +5,8 @@ import sys
 from github_trend_agent.cleaner import clean_repositories
 from github_trend_agent.config import ConfigurationError, Settings
 from github_trend_agent.github_client import GitHubClient, GitHubClientError
-from github_trend_agent.models import CleanRepository
+from github_trend_agent.models import ScoredRepository
+from github_trend_agent.scorer import score_current_heat
 
 
 def build_startup_message(settings: Settings) -> str:
@@ -45,20 +46,26 @@ def main() -> int:
         f"duplicates={cleaning_result.duplicates_removed}, "
         f"invalid={cleaning_result.invalid_removed}."
     )
-    print(f"Showing top {settings.top_n}:")
+    scored_repositories = score_current_heat(cleaning_result.repositories)
+    print(f"Showing top {settings.top_n} by current heat:")
     if result.rate_limit.remaining is not None:
         print(f"GitHub search requests remaining: {result.rate_limit.remaining}")
     for position, repository in enumerate(
-        cleaning_result.repositories[: settings.top_n],
+        scored_repositories[: settings.top_n],
         start=1,
     ):
         print(_format_repository(position, repository))
     return 0
 
 
-def _format_repository(position: int, repository: CleanRepository) -> str:
+def _format_repository(position: int, scored: ScoredRepository) -> str:
+    repository = scored.repository
     return (
         f"{position}. {repository.name} | "
-        f"{repository.language} | stars={repository.stars:,}\n"
+        f"{repository.language} | heat={scored.total_score:.1f}\n"
+        f"   components: stars={scored.star_score:.1f}, "
+        f"forks={scored.fork_score:.1f}, "
+        f"freshness={scored.freshness_score:.1f}\n"
+        f"   counts: stars={repository.stars:,}, forks={repository.forks:,}\n"
         f"   {repository.url}"
     )

@@ -55,7 +55,8 @@ Docker 化、CI、生产配置、监控、安全检查和性能优化。
   "url": "https://github.com/owner/repository",
   "topics": [],
   "owner": "owner",
-  "updated_at": "ISO-8601 timestamp"
+  "updated_at": "ISO-8601 timestamp",
+  "pushed_at": "ISO-8601 timestamp"
 }
 ```
 

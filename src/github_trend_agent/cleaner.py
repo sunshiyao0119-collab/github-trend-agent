@@ -44,6 +44,7 @@ def clean_repositories(repositories: Iterable[Repository]) -> CleaningResult:
                 topics=repository.topics,
                 owner=repository.owner.strip(),
                 updated_at=repository.updated_at,
+                pushed_at=repository.pushed_at,
             )
         )
 

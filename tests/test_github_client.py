@@ -216,6 +216,7 @@ def _repository_payload(name: str) -> dict[str, object]:
         "topics": ["github", "trends"],
         "owner": {"login": "example"},
         "updated_at": "2026-07-20T08:00:00Z",
+        "pushed_at": "2026-07-19T08:00:00Z",
     }
 
 

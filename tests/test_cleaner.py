@@ -23,6 +23,7 @@ def _repository(**changes: object) -> Repository:
         topics=("python",),
         owner="owner",
         updated_at=datetime(2026, 7, 22, tzinfo=UTC),
+        pushed_at=datetime(2026, 7, 21, tzinfo=UTC),
     )
     return replace(repository, **changes)
 

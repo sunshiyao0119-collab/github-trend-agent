@@ -258,12 +258,6 @@ def _repository_from_payload(payload: object) -> Repository:
     ):
         raise GitHubClientError("GitHub repository topics must be a string list.")
 
-    updated_at_raw = _required_str(payload, "updated_at")
-    try:
-        updated_at = datetime.fromisoformat(updated_at_raw.replace("Z", "+00:00"))
-    except ValueError as exc:
-        raise GitHubClientError("GitHub repository updated_at is invalid.") from exc
-
     return Repository(
         name=_required_str(payload, "full_name"),
         description=_optional_str(payload, "description"),
@@ -273,7 +267,8 @@ def _repository_from_payload(payload: object) -> Repository:
         url=_required_str(payload, "html_url"),
         topics=tuple(topics_payload),
         owner=_required_str(owner_payload, "login"),
-        updated_at=updated_at,
+        updated_at=_required_datetime(payload, "updated_at"),
+        pushed_at=_required_datetime(payload, "pushed_at"),
     )
 
 
@@ -282,6 +277,14 @@ def _required_str(payload: Mapping[str, object], field: str) -> str:
     if not isinstance(value, str) or not value:
         raise GitHubClientError(f"GitHub repository field {field} must be a string.")
     return value
+
+
+def _required_datetime(payload: Mapping[str, object], field: str) -> datetime:
+    raw_value = _required_str(payload, field)
+    try:
+        return datetime.fromisoformat(raw_value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise GitHubClientError(f"GitHub repository {field} is invalid.") from exc
 
 
 def _optional_str(payload: Mapping[str, object], field: str) -> str | None:

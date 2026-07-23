@@ -17,6 +17,7 @@ class Repository:
     topics: tuple[str, ...]
     owner: str
     updated_at: datetime
+    pushed_at: datetime
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,6 +33,7 @@ class CleanRepository:
     topics: tuple[str, ...]
     owner: str
     updated_at: datetime
+    pushed_at: datetime
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,6 +44,17 @@ class CleaningResult:
     total_received: int
     duplicates_removed: int
     invalid_removed: int
+
+
+@dataclass(frozen=True, slots=True)
+class ScoredRepository:
+    """A clean repository with explainable current-heat components."""
+
+    repository: CleanRepository
+    total_score: float
+    star_score: float
+    fork_score: float
+    freshness_score: float
 
 
 @dataclass(frozen=True, slots=True)
