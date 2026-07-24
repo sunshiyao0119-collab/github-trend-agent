@@ -23,6 +23,7 @@ htmlcov/
 
 # Generated daily reports
 reports/*.md
+reports/*.html
 !reports/README.md
 
 # IDE and operating system files

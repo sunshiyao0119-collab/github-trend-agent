@@ -11,7 +11,9 @@ from github_trend_agent.llm.deepseek import DeepSeekProvider
 from github_trend_agent.models import AnalysisOutcome, DailyReport, ScoredRepository
 from github_trend_agent.reporter import (
     ReportSaveError,
+    render_html_report,
     render_markdown_report,
+    save_html_report,
     save_markdown_report,
 )
 from github_trend_agent.scorer import score_current_heat
@@ -74,14 +76,17 @@ def main() -> int:
         analysis_outcomes=analysis_outcomes,
     )
     markdown = render_markdown_report(daily_report)
+    html_report = render_html_report(daily_report)
     print("\n--- Markdown 日报预览 ---\n")
     print(markdown, end="")
     try:
         report_path = save_markdown_report(daily_report, markdown)
+        html_path = save_html_report(daily_report, html_report)
     except ReportSaveError as exc:
         print(f"Report save error: {exc}", file=sys.stderr)
         return 1
     print(f"\n日报已保存：{report_path}")
+    print(f"HTML 日报已保存：{html_path}")
     return 0
 
 

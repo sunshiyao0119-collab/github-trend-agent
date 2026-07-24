@@ -15,7 +15,9 @@ from github_trend_agent.models import (
 from github_trend_agent.reporter import (
     ReportAlreadyExistsError,
     ReportSaveError,
+    render_html_report,
     render_markdown_report,
+    save_html_report,
     save_markdown_report,
 )
 
@@ -142,6 +144,94 @@ class RenderMarkdownReportTest(unittest.TestCase):
         self.assertIn("没有可展示的项目", markdown)
 
 
+class RenderHTMLReportTest(unittest.TestCase):
+    def test_renders_standalone_html_with_repository_link(self) -> None:
+        report = DailyReport(
+            report_date=date(2026, 7, 24),
+            repositories=(_scored_repository(),),
+        )
+
+        html_report = render_html_report(report)
+
+        self.assertTrue(html_report.startswith("<!doctype html>"))
+        self.assertIn('<meta charset="utf-8">', html_report)
+        self.assertIn("日期：2026-07-24", html_report)
+        self.assertIn("1. owner/project", html_report)
+        self.assertIn('href="https://github.com/owner/project"', html_report)
+        self.assertIn("Stars 80.0 / Forks 70.0 / 活跃度 99.0", html_report)
+        self.assertIn("本项目本次未进行 AI 分析", html_report)
+
+    def test_renders_ai_analysis_and_recommendation(self) -> None:
+        scored = _scored_repository()
+        outcome = AnalysisOutcome(
+            scored_repository=scored,
+            analysis=ProjectAnalysis(
+                summary="一个实用项目",
+                why_worth_attention="热度较高",
+                technical_value="学习工程结构",
+                learning_advice="先阅读文档",
+                suitable_for=("Python 学习者",),
+                recommendation_score=4,
+                evidence_limitations=("未阅读源码",),
+            ),
+            error=None,
+        )
+
+        html_report = render_html_report(
+            DailyReport(
+                report_date=date(2026, 7, 24),
+                repositories=(scored,),
+                analysis_outcomes=(outcome,),
+            )
+        )
+
+        self.assertIn("<h3", html_report)
+        self.assertIn("AI 分析", html_report)
+        self.assertIn("项目简介：</strong>一个实用项目", html_report)
+        self.assertIn("推荐指数：</strong>★★★★☆", html_report)
+
+    def test_escapes_html_and_hides_internal_failure(self) -> None:
+        scored = _scored_repository()
+        malicious = AnalysisOutcome(
+            scored_repository=scored,
+            analysis=ProjectAnalysis(
+                summary='<script>alert("x")</script>',
+                why_worth_attention="safe",
+                technical_value="safe",
+                learning_advice="safe",
+                suitable_for=("learner",),
+                recommendation_score=3,
+                evidence_limitations=("limited",),
+            ),
+            error=None,
+        )
+        failed = AnalysisOutcome(
+            scored_repository=scored,
+            analysis=None,
+            error="internal provider detail",
+        )
+
+        malicious_html = render_html_report(
+            DailyReport(
+                report_date=date(2026, 7, 24),
+                repositories=(scored,),
+                analysis_outcomes=(malicious,),
+            )
+        )
+        failed_html = render_html_report(
+            DailyReport(
+                report_date=date(2026, 7, 24),
+                repositories=(scored,),
+                analysis_outcomes=(failed,),
+            )
+        )
+
+        self.assertNotIn("<script>", malicious_html)
+        self.assertIn("&lt;script&gt;", malicious_html)
+        self.assertIn("AI 分析未完成", failed_html)
+        self.assertNotIn("internal provider detail", failed_html)
+
+
 class SaveMarkdownReportTest(unittest.TestCase):
     def test_creates_directory_and_saves_utf8_report(self) -> None:
         report = DailyReport(report_date=date(2026, 7, 24), repositories=())
@@ -194,6 +284,20 @@ class SaveMarkdownReportTest(unittest.TestCase):
                 save_markdown_report(report, "  \n", output_directory)
 
             self.assertFalse(output_directory.exists())
+
+    def test_saves_html_as_separate_utf8_file(self) -> None:
+        report = DailyReport(report_date=date(2026, 7, 24), repositories=())
+        html_report = "<!doctype html><p>中文</p>\n"
+
+        with TemporaryDirectory() as temporary_directory:
+            saved_path = save_html_report(
+                report,
+                html_report,
+                Path(temporary_directory),
+            )
+
+            self.assertEqual(saved_path.name, "2026-07-24.html")
+            self.assertEqual(saved_path.read_text(encoding="utf-8"), html_report)
 
 
 if __name__ == "__main__":
