@@ -21,6 +21,10 @@ dist/
 .coverage
 htmlcov/
 
+# Generated daily reports
+reports/*.md
+!reports/README.md
+
 # IDE and operating system files
 .idea/
 .vscode/

@@ -1,13 +1,19 @@
 """Command-line entry point for GitHub Trend Agent."""
 
 import sys
+from datetime import datetime
 
 from github_trend_agent.cleaner import clean_repositories
 from github_trend_agent.config import ConfigurationError, Settings
 from github_trend_agent.github_client import GitHubClient, GitHubClientError
 from github_trend_agent.llm.analysis import RepositoryAnalyzer, analyze_batch
 from github_trend_agent.llm.deepseek import DeepSeekProvider
-from github_trend_agent.models import ScoredRepository
+from github_trend_agent.models import AnalysisOutcome, DailyReport, ScoredRepository
+from github_trend_agent.reporter import (
+    ReportSaveError,
+    render_markdown_report,
+    save_markdown_report,
+)
 from github_trend_agent.scorer import score_current_heat
 
 
@@ -58,8 +64,24 @@ def main() -> int:
     ):
         print(_format_repository(position, repository))
 
+    analysis_outcomes: tuple[AnalysisOutcome, ...] = ()
     if settings.llm_analysis_enabled:
-        _print_deepseek_analysis(settings, scored_repositories)
+        analysis_outcomes = _analyze_with_deepseek(settings, scored_repositories)
+
+    daily_report = DailyReport(
+        report_date=datetime.now().astimezone().date(),
+        repositories=scored_repositories[: settings.top_n],
+        analysis_outcomes=analysis_outcomes,
+    )
+    markdown = render_markdown_report(daily_report)
+    print("\n--- Markdown 日报预览 ---\n")
+    print(markdown, end="")
+    try:
+        report_path = save_markdown_report(daily_report, markdown)
+    except ReportSaveError as exc:
+        print(f"Report save error: {exc}", file=sys.stderr)
+        return 1
+    print(f"\n日报已保存：{report_path}")
     return 0
 
 
@@ -76,10 +98,10 @@ def _format_repository(position: int, scored: ScoredRepository) -> str:
     )
 
 
-def _print_deepseek_analysis(
+def _analyze_with_deepseek(
     settings: Settings,
     scored_repositories: tuple[ScoredRepository, ...],
-) -> None:
+) -> tuple[AnalysisOutcome, ...]:
     provider = DeepSeekProvider(
         api_key=settings.require_deepseek_api_key(),
         base_url=settings.deepseek_api_url,
@@ -89,17 +111,4 @@ def _print_deepseek_analysis(
     selected = scored_repositories[: settings.llm_analysis_limit]
     outcomes = analyze_batch(selected, RepositoryAnalyzer(provider))
     print(f"DeepSeek 分析：请求项目数={len(selected)}")
-    for outcome in outcomes:
-        name = outcome.scored_repository.repository.name
-        if outcome.analysis is None:
-            print(f"项目 {name} 分析失败：{outcome.error}")
-            continue
-        analysis = outcome.analysis
-        print(f"\nAI 项目分析：{name}")
-        print(f"项目简介：{analysis.summary}")
-        print(f"值得关注：{analysis.why_worth_attention}")
-        print(f"技术价值：{analysis.technical_value}")
-        print(f"学习建议：{analysis.learning_advice}")
-        print(f"适合人群：{', '.join(analysis.suitable_for)}")
-        print(f"推荐指数：{analysis.recommendation_score}/5")
-        print(f"证据限制：{'; '.join(analysis.evidence_limitations)}")
+    return outcomes

@@ -1,7 +1,7 @@
 """Typed domain models used across the application."""
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,6 +77,15 @@ class AnalysisOutcome:
     scored_repository: ScoredRepository
     analysis: ProjectAnalysis | None
     error: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class DailyReport:
+    """The provider-neutral data required to render one daily report."""
+
+    report_date: date
+    repositories: tuple[ScoredRepository, ...]
+    analysis_outcomes: tuple[AnalysisOutcome, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
